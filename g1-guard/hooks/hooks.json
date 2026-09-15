@@ -5,10 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3",
-            "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/g1_guard.py"
-            ],
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run_hook.sh\" || true",
             "timeout": 20,
             "statusMessage": "G-1: scanning the prompt"
           }
@@ -20,10 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3",
-            "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/g1_guard.py"
-            ],
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run_hook.sh\" || true",
             "timeout": 20,
             "statusMessage": "G-1: scanning what was read"
           }
@@ -36,10 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3",
-            "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/g1_guard.py"
-            ],
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run_hook.sh\" || true",
             "timeout": 20,
             "statusMessage": "G-1: verifying the call"
           }

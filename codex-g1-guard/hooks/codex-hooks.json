@@ -5,8 +5,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${PLUGIN_ROOT}/scripts/g1_guard.py\"",
-            "timeout": 20
+            "command": "sh \"${PLUGIN_ROOT}/scripts/run_hook.sh\" || true",
+            "timeout": 20,
+            "commandWindows": "powershell.exe -NoProfile -Command \"$h='${PLUGIN_ROOT}\\scripts\\g1_guard.py'; if (Get-Command python -EA SilentlyContinue) { python $h } elseif (Get-Command py -EA SilentlyContinue) { py -3 $h }; exit 0\""
           }
         ]
       }
@@ -16,8 +17,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${PLUGIN_ROOT}/scripts/g1_guard.py\"",
-            "timeout": 20
+            "command": "sh \"${PLUGIN_ROOT}/scripts/run_hook.sh\" || true",
+            "timeout": 20,
+            "commandWindows": "powershell.exe -NoProfile -Command \"$h='${PLUGIN_ROOT}\\scripts\\g1_guard.py'; if (Get-Command python -EA SilentlyContinue) { python $h } elseif (Get-Command py -EA SilentlyContinue) { py -3 $h }; exit 0\""
           }
         ]
       }
@@ -27,8 +29,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${PLUGIN_ROOT}/scripts/g1_guard.py\"",
-            "timeout": 20
+            "command": "sh \"${PLUGIN_ROOT}/scripts/run_hook.sh\" || true",
+            "timeout": 20,
+            "commandWindows": "powershell.exe -NoProfile -Command \"$h='${PLUGIN_ROOT}\\scripts\\g1_guard.py'; if (Get-Command python -EA SilentlyContinue) { python $h } elseif (Get-Command py -EA SilentlyContinue) { py -3 $h }; exit 0\""
           }
         ]
       }
