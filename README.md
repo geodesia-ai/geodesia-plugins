@@ -122,7 +122,7 @@ Set these in your host's environment, or in the `env` block of your agent's sett
 | variable | default | what it does |
 |---|---|---|
 | `GEODESIA_G1_URL` | the hosted trial | Your own guard endpoint. |
-| `G1_ALLOWED_DOMAINS` | empty | **Set this.** Comma-separated hosts that are yours. Without it every destination reads as new, and after the first external read the guard denies egress everywhere. |
+| `G1_ALLOWED_DOMAINS` | empty | **Set this.** Comma-separated hosts that are yours. Without it every destination reads as new, and after the first external read the guard denies egress everywhere. The guard's own endpoint is added for you, derived from `GEODESIA_G1_URL`, so talking to your own guard is never mistaken for exfiltration. |
 | `G1_DENY_ON` | `all` | `all` denies on the detectors as well as the policy. `policy` denies only on the deterministic chain: untrusted read, then a sink, then a new destination. |
 | `G1_HOOK_TIMEOUT` | `12` | Seconds before the guard call is abandoned. |
 
