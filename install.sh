@@ -5,22 +5,29 @@
 # settings.json esistente. Fonde, non sovrascrive: i permessi e gli hook gia' presenti restano, e una
 # copia di sicurezza viene messa da parte prima di toccare qualsiasi cosa.
 #
-#   sh install.sh                 installa per l'utente corrente (~/.claude)
-#   sh install.sh --dry-run       dice cosa farebbe, senza scrivere niente
-#   sh install.sh --uninstall     toglie gli hook dal settings.json e rimuove i file
+#   sh install.sh                     installa in OGNI host che trova sulla macchina
+#   sh install.sh --host cursor       ne installa uno solo
+#   sh install.sh --dry-run           dice cosa farebbe, senza scrivere niente
+#   sh install.sh --uninstall         toglie le voci del guard e lascia intatto il resto
+#
+# Host: claude, codex, cursor, gemini, windsurf, copilot.
 #
 set -eu
 
 QUI=$(cd "$(dirname "$0")" && pwd)
-DEST="${G1_DEST:-$HOME/.claude}"
 AZIONE="install"
+SOLO=""
 
-for arg in "$@"; do
-    case "$arg" in
+while [ $# -gt 0 ]; do
+    case "$1" in
         --dry-run)   AZIONE="dry-run" ;;
         --uninstall) AZIONE="uninstall" ;;
-        *) echo "argomento sconosciuto: $arg" >&2; exit 2 ;;
+        --host)      shift; SOLO="${1:-}" ;;
+        --host=*)    SOLO="${1#--host=}" ;;
+        -h|--help)   sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "argomento sconosciuto: $1" >&2; exit 2 ;;
     esac
+    shift
 done
 
 PY=""
@@ -32,9 +39,8 @@ if [ -z "$PY" ]; then
     exit 1
 fi
 
-echo "destinazione: $DEST"
-echo "python:       $($PY --version 2>&1)"
-echo "azione:       $AZIONE"
+echo "python: $($PY --version 2>&1)"
+echo "azione: $AZIONE${SOLO:+  (solo $SOLO)}"
 echo
 
-"$PY" "$QUI/install.py" "$AZIONE" "$QUI" "$DEST"
+"$PY" "$QUI/install.py" "$AZIONE" "$QUI" "$SOLO"

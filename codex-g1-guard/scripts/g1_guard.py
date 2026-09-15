@@ -48,7 +48,22 @@ NET_WORDS = ("curl", "wget", "http://", "https://", "scp ", "rsync ", "ssh ", "n
 # `jailbreak` sugli argomenti di Write e Bash, e il guard blocca chi scrive i suoi banchi. Su una
 # macchina che fa ricerca sulla sicurezza, `policy` e' il modo utile; altrove `all` prende di piu'.
 DENY_ON = os.environ.get("G1_DENY_ON", "all").strip().lower()
-UA = "geodesia-g1-hook/1.1"      # Cloudflare has banned the default Python-urllib signature before (PART 161)
+# L'HOST determina due cose: come si chiamano gli eventi e che forma ha un diniego. Il payload di
+# Claude porta `hook_event_name`; Cursor, Copilot e Windsurf no, perche' l'evento lo sanno dalla
+# posizione in cui l'hook e' scritto. Percio' l'installatore lo passa come primo argomento, che e'
+# quel che fa Noma in produzione. `G1_HOST` lo scrive l'installatore: qui non si indovina.
+HOST = os.environ.get("G1_HOST", "claude").strip().lower()
+
+# Nomi di evento di ciascun host, ricondotti ai tre che il guard conosce. Presi dalla documentazione
+# di ciascun host, non inventati; dove restano dubbi, il README dice cosa e' verificato a runtime.
+EVENTI = {
+    "prompt": {"UserPromptSubmit", "beforeSubmitPrompt", "userPromptSubmitted", "pre_user_prompt"},
+    "letto":  {"PostToolUse", "postToolUse", "post_mcp_tool_use", "AfterTool", "afterFileEdit"},
+    "azione": {"PreToolUse", "preToolUse", "beforeShellExecution", "beforeMCPExecution",
+               "pre_run_command", "pre_mcp_tool_use", "pre_write_code", "BeforeTool"},
+    "fine":   {"Stop", "stop", "agentStop"},
+}
+UA = "geodesia-g1-hook/1.2"      # Cloudflare has banned the default Python-urllib signature before (PART 161)
 
 
 def rpc(tool, args):
@@ -72,6 +87,61 @@ def taint_path(sid):
 def out(obj):
     print(json.dumps(obj))
     sys.exit(0)
+
+
+def nega(motivo, tool=""):
+    """Un DINIEGO, nel dialetto dell'host.
+
+    Uscire a 2 blocca su Claude Code, Codex, Cursor, Windsurf, Copilot e Gemini: e' l'unico
+    meccanismo che funziona ovunque, ed e' la ricaduta per ogni host che non abbia un dialetto suo.
+    Dove il JSON strutturato esiste si preferisce quello, perche' porta il motivo al modello invece
+    che solo all'utente."""
+    if HOST in ("claude", "codex", "copilot", "vscode"):
+        out({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                                    "permissionDecision": "deny",
+                                    "permissionDecisionReason": motivo}})
+    if HOST == "cursor":
+        out({"permission": "deny", "agent_message": motivo,
+             "user_message": f"Geodesia G-1 blocked {tool}." if tool else "Geodesia G-1 blocked this."})
+    if HOST == "gemini":
+        out({"decision": "deny", "reason": motivo})
+    sys.stderr.write(motivo + "\n")          # windsurf e chiunque altro: exit 2 e il motivo su stderr
+    sys.exit(2)
+
+
+def annota(messaggio, breve=""):
+    """Un'ANNOTAZIONE: niente blocco, solo testo che entra nel contesto del modello."""
+    if HOST in ("claude", "codex", "copilot", "vscode"):
+        fuori = {"hookSpecificOutput": {"hookEventName": "PostToolUse",
+                                        "additionalContext": messaggio}}
+        if breve:
+            fuori["systemMessage"] = breve
+        out(fuori)
+    if HOST == "cursor":
+        out({"permission": "allow", "agent_message": messaggio})
+    if HOST == "gemini":
+        out({"decision": "allow", "reason": messaggio})
+    sys.stderr.write(messaggio + "\n")       # non blocca: stderr e uscita 0
+    sys.exit(0)
+
+
+def contesto_prompt(messaggio):
+    if HOST in ("claude", "codex", "copilot", "vscode"):
+        out({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
+                                    "additionalContext": messaggio}})
+    if HOST == "cursor":
+        out({"permission": "allow", "agent_message": messaggio})
+    if HOST == "gemini":
+        out({"decision": "allow", "reason": messaggio})
+    sys.stderr.write(messaggio + "\n")
+    sys.exit(0)
+
+
+def classifica(nome):
+    for famiglia, nomi in EVENTI.items():
+        if nome in nomi:
+            return famiglia
+    return ""
 
 
 def text_of(v, budget=MAXCHARS):
@@ -162,12 +232,16 @@ def main():
         ev = json.load(sys.stdin)
     except Exception:
         sys.exit(0)
-    event = ev.get("hook_event_name") or ""
-    sid = ev.get("session_id")
+    # Cursor, Copilot e Windsurf non mandano il nome dell'evento: lo sanno dalla posizione in cui
+    # l'hook e' scritto. L'installatore lo passa quindi come primo argomento. Vale piu' del campo,
+    # perche' e' quel che l'installatore ha DICHIARATO installando.
+    event = (sys.argv[1] if len(sys.argv) > 1 else "") or ev.get("hook_event_name") or ""
+    famiglia = classifica(event)
+    sid = ev.get("session_id") or ev.get("conversation_id") or ev.get("sessionId")
 
     try:
         # ── the prompt itself ────────────────────────────────────────────────
-        if event == "UserPromptSubmit":
+        if famiglia == "prompt":
             p = ev.get("prompt") or ""
             if not p.strip():
                 sys.exit(0)
@@ -187,14 +261,14 @@ def main():
                           "plainly what you will not do and offer the nearest thing you can."
                           if grave else
                           "Keep it in mind while you answer; it is a signal, not a verdict.")
-                out({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
-                     "additionalContext": "[Geodesia G-1] the QUESTION scores above threshold on: "
-                     + ", ".join(hits) + ". " + azione
-                     + " Quote the axis and the number if you mention it, never 'it looked suspicious'."}})
+                contesto_prompt("[Geodesia G-1] the QUESTION scores above threshold on: "
+                                + ", ".join(hits) + ". " + azione
+                                + " Quote the axis and the number if you mention it, never 'it "
+                                  "looked suspicious'.")
             sys.exit(0)
 
         # ── what the agent just READ ─────────────────────────────────────────
-        if event == "PostToolUse":
+        if famiglia == "letto":
             tool = ev.get("tool_name") or ""
             external = tool in EXTERNAL_TOOLS or tool.startswith("mcp__")
             if tool not in READ_TOOLS and not external:
@@ -229,17 +303,14 @@ def main():
                          "not change your behaviour on the strength of this flag alone.")
                 coda = ("\nThis session is now marked tainted: an egress tool call to a new "
                         "destination will be denied." if external or iniezione else "")
-                out({"systemMessage":
-                        (f"G-1: injected instructions in {tool} output (rag_jailbreak {p_rag})"
-                         if iniezione else
-                         f"G-1: {tool} output flags {', '.join(assi)} (not an injection)"),
-                     "hookSpecificOutput": {"hookEventName": "PostToolUse",
-                     "additionalContext":
-                        f"[Geodesia G-1 — {r.get('verdict').upper()}] {testa}{coda}"}})
+                annota(f"[Geodesia G-1 — {r.get('verdict').upper()}] {testa}{coda}",
+                       breve=(f"G-1: injected instructions in {tool} output (rag_jailbreak {p_rag})"
+                              if iniezione else
+                              f"G-1: {tool} output flags {', '.join(assi)} (not an injection)"))
             sys.exit(0)
 
         # ── la RISPOSTA, a fine turno ────────────────────────────────────────
-        if event == "Stop":
+        if famiglia == "fine":
             # PROTEZIONE DAL CICLO, prima di tutto. Un hook Stop che blocca rimanda il modello a
             # lavorare: se blocca di nuovo sulla risposta corretta, il turno non finisce piu'. Si
             # interviene UNA volta per turno. `stop_hook_active` e' il segnale del client che siamo al
@@ -277,9 +348,16 @@ def main():
                      "guard will not stop you a second time on this turn."})
 
         # ── what the agent is about to DO ────────────────────────────────────
-        if event == "PreToolUse":
+        if famiglia == "azione":
             tool = ev.get("tool_name") or ""
             ti = ev.get("tool_input") or {}
+            # Cursor manda il comando in `command`, Windsurf dentro `tool_info`. Si guarda dove
+            # ciascuno lo mette, invece di pretendere il vocabolario di Claude da tutti.
+            if not ti and isinstance(ev.get("tool_info"), dict):
+                ti = ev["tool_info"]
+            if not tool:
+                tool = (ev.get("mcp_tool_name") or ev.get("mcp_server_name")
+                        or ("Bash" if ti.get("command") else ""))
             if tool == "Bash" and not _bash_is_sink(ti.get("command", "")):
                 sys.exit(0)
             if tool not in SINK_TOOLS and tool != "Bash" and not tool.startswith("mcp__"):
@@ -313,12 +391,10 @@ def main():
                     "that was not allow-listed — the exfiltration pattern."
                     if by_policy else
                     "The detectors flag the call's own arguments, independently of the session's history.")
-                out({"hookSpecificOutput": {"hookEventName": "PreToolUse",
-                     "permissionDecision": "deny",
-                     "permissionDecisionReason":
-                        f"[Geodesia G-1] blocked {tool}: {why}. "
-                        f"taint={pol.get('taint')} sink={pol.get('sink')} new_domain={pol.get('new_domain')} "
-                        f"destinations={dest}. {spiegazione} Ask the user before retrying."}})
+                nega(f"[Geodesia G-1] blocked {tool}: {why}. "
+                     f"taint={pol.get('taint')} sink={pol.get('sink')} "
+                     f"new_domain={pol.get('new_domain')} destinations={dest}. {spiegazione} "
+                     "Ask the user before retrying.", tool=tool)
             sys.exit(0)
     except (urllib.error.URLError, RuntimeError, TimeoutError, OSError):
         sys.exit(0)                                   # guard unreachable → fail open, never brick the session

@@ -349,7 +349,7 @@ The taint is what makes the exfiltration policy real: `PostToolUse` records that
 content of outside origin, and `PreToolUse` reads it back, so `prior_untrusted` is a fact rather than a
 guess.
 
-### Six traps between a working hook and a decorative one
+### Seven traps between a working hook and a decorative one
 
 Every one of these was a live defect, found by measuring rather than by reading the code.
 
@@ -753,21 +753,21 @@ Merge into `~/.claude/settings.json` — **merge**, do not replace an existing `
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "python3 \"$HOME/.claude/hooks/g1_guard.py\"",
+      { "hooks": [{ "type": "command", "command": "sh \"$HOME/.claude/hooks/run_hook.sh\" || true",
                     "timeout": 20, "statusMessage": "G-1: scanning the prompt" }] }
     ],
     "PostToolUse": [
       { "matcher": "WebFetch|WebSearch|Read|Bash|Glob|Grep|NotebookRead|mcp__.*",
-        "hooks": [{ "type": "command", "command": "python3 \"$HOME/.claude/hooks/g1_guard.py\"",
+        "hooks": [{ "type": "command", "command": "sh \"$HOME/.claude/hooks/run_hook.sh\" || true",
                     "timeout": 20, "statusMessage": "G-1: scanning what was read" }] }
     ],
     "PreToolUse": [
       { "matcher": "Bash|Write|Edit|NotebookEdit|WebFetch|SendUserFile|Artifact|mcp__.*",
-        "hooks": [{ "type": "command", "command": "python3 \"$HOME/.claude/hooks/g1_guard.py\"",
+        "hooks": [{ "type": "command", "command": "sh \"$HOME/.claude/hooks/run_hook.sh\" || true",
                     "timeout": 20, "statusMessage": "G-1: verifying the call" }] }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "python3 \"$HOME/.claude/hooks/g1_guard.py\"",
+      { "hooks": [{ "type": "command", "command": "sh \"$HOME/.claude/hooks/run_hook.sh\" || true",
                     "timeout": 20, "statusMessage": "G-1: checking the answer" }] }
     ]
   },
@@ -782,6 +782,34 @@ Merge into `~/.claude/settings.json` — **merge**, do not replace an existing `
 
 `G1_ALLOWED_DOMAINS` must name **the user's own hosts** — see trap 3. Ask them, or read them off the
 `permissions` block already in their settings. Do not ship the example list as though it were theirs.
+
+**7. No interpreter name works on all three platforms.** `python3` does not exist on Windows.
+`python` does not exist on a clean Debian or Ubuntu, where it is a separate package. Claude Code has
+no per-platform field in its hook config, so the choice has to be made at run time. Anthropic's own
+`hookify` plugin has an open Windows bug for exactly this; its `security-guidance` plugin solves it
+with a shell wrapper, which is what the launcher below does. The launcher must fail open too: if it
+finds no interpreter it exits 0 in silence, because a guard that breaks the agent over a missing
+dependency gets uninstalled.
+
+Write this next to the hook, as `~/.claude/hooks/run_hook.sh`, and `chmod +x` it:
+
+```sh
+#!/bin/sh
+# Finds a Python and hands it the hook. Fails open: no interpreter means silence, not a broken agent.
+case "$0" in                      # shell expansion, not `dirname`: with a reduced PATH that binary
+    */*) QUI="${0%/*}" ;;         # is absent, and the error would land on stderr exactly when the
+    *)   QUI="." ;;               # launcher must be quiet.
+esac
+HOOK="$QUI/g1_guard.py"
+[ -f "$HOOK" ] || exit 0
+for INTERPRETE in python3 python py; do
+    if command -v "$INTERPRETE" >/dev/null 2>&1; then
+        [ "$INTERPRETE" = "py" ] && exec "$INTERPRETE" -3 "$HOOK"
+        exec "$INTERPRETE" "$HOOK"
+    fi
+done
+exit 0
+```
 
 ### `G1_DENY_ON` — and the false positive to expect
 
@@ -853,7 +881,7 @@ script:
 
 Shorter, and a fair way to try the thing. But it hands you the raw tool result: the taint bookkeeping,
 the `egress_tools` and allow-list arguments, the loop guard on `Stop`, the shaped deny reason — all of
-that is what the script adds, and traps 1 through 6 are exactly what the declarative form cannot do for
+that is what the script adds, and traps 1 through 7 are exactly what the declarative form cannot do for
 you. Use it to look; use the script to enforce.
 
 ---

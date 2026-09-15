@@ -28,9 +28,9 @@ HOOK="$QUI/g1_guard.py"
 for INTERPRETE in python3 python py; do
     if command -v "$INTERPRETE" >/dev/null 2>&1; then
         if [ "$INTERPRETE" = "py" ]; then
-            exec "$INTERPRETE" -3 "$HOOK"        # il launcher di Windows vuole la versione
+            exec "$INTERPRETE" -3 "$HOOK" "$@"        # il launcher di Windows vuole la versione
         fi
-        exec "$INTERPRETE" "$HOOK"
+        exec "$INTERPRETE" "$HOOK" "$@"
     fi
 done
 
