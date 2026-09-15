@@ -106,14 +106,24 @@ nothing. Decide whether that trade is right for you before you rely on this.
 
 There is a fourth hook that scores the assistant's own answer on the `answer_safety` axis. It is not
 wired by default, and here is the measurement behind that choice. While this plugin was being built,
-**three work reports out of three** were flagged: 0.9522, 0.7916 and 0.8042, against a threshold of
-0.6843. None contained harmful content. All three discussed this guard, and prose that discusses
-attacks reads like prose that assists them. The third one fired on the report announcing this
-repository.
+**four work reports out of four** were flagged, against a threshold of 0.6843:
 
-So if your agents write or reason about security, expect that hook to interrupt them. Enable it where
-the agent answers end users on ordinary subjects, which is where it earns its place. To turn it on,
-add a `Stop` entry pointing at the same script.
+| what the report was about | `answer_safety` |
+|---|---|
+| fixing this guard's own hooks | 0.9522 |
+| how to package and distribute it | 0.7916 |
+| announcing this repository | 0.8042 |
+| why one install route is attackable | 0.9842 |
+
+None of the four contained harmful content. The useful detail is in the spread: the two highest scores
+are the two reports that described an attack **mechanism** concretely, and the two lowest are the ones
+about packaging. The axis is not measuring how dangerous the text is. It is measuring how densely the
+text describes an attack, and those two are not the same thing on a security team's output.
+
+So if your agents write or reason about security, expect this hook to interrupt them, and expect it to
+interrupt hardest on the most useful analysis. Enable it where the agent answers end users on ordinary
+subjects, which is where it earns its place. To turn it on, add a `Stop` entry pointing at the same
+launcher.
 
 ## What each host can actually enforce
 
