@@ -89,10 +89,15 @@ nothing. Decide whether that trade is right for you before you rely on this.
 ### `Stop` is shipped switched off
 
 There is a fourth hook that scores the assistant's own answer on the `answer_safety` axis. It is not
-wired by default, and here is the measurement behind that choice. Two work reports about this very
-guard scored 0.9522 and 0.7916 against a threshold of 0.6843, because prose that discusses attacks
-reads like prose that assists them. If your agents write about security, that hook will interrupt them.
-To enable it, add a `Stop` entry pointing at the same script.
+wired by default, and here is the measurement behind that choice. While this plugin was being built,
+**three work reports out of three** were flagged: 0.9522, 0.7916 and 0.8042, against a threshold of
+0.6843. None contained harmful content. All three discussed this guard, and prose that discusses
+attacks reads like prose that assists them. The third one fired on the report announcing this
+repository.
+
+So if your agents write or reason about security, expect that hook to interrupt them. Enable it where
+the agent answers end users on ordinary subjects, which is where it earns its place. To turn it on,
+add a `Stop` entry pointing at the same script.
 
 ## What each host can actually enforce
 
