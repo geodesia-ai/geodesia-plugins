@@ -1,0 +1,15 @@
+{
+  "name": "g1-guard",
+  "description": "Geodesia G-1 guard for Codex",
+  "version": "0.1.0",
+  "author": {
+    "name": "Geodesia"
+  },
+  "hooks": "./hooks/codex-hooks.json",
+  "interface": {
+    "displayName": "Geodesia G-1 Guard",
+    "shortDescription": "Nine calibrated axes, run by the harness",
+    "developerName": "Geodesia",
+    "category": "Developer Tools"
+  }
+}

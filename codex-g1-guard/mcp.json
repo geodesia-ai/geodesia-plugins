@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "geodesia-g1": {
+      "url": "https://demo.geodesia.ai/mcp"
+    }
+  }
+}

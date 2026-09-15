@@ -1,0 +1,14 @@
+{
+  "name": "geodesia",
+  "owner": {
+    "name": "Geodesia"
+  },
+  "plugins": [
+    {
+      "name": "g1-guard",
+      "source": "./g1-guard",
+      "version": "0.1.0",
+      "description": "Geodesia G-1: nine calibrated axes as Claude Code hooks"
+    }
+  ]
+}

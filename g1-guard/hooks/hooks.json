@@ -1,0 +1,51 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/g1_guard.py"
+            ],
+            "timeout": 20,
+            "statusMessage": "G-1: scanning the prompt"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/g1_guard.py"
+            ],
+            "timeout": 20,
+            "statusMessage": "G-1: scanning what was read"
+          }
+        ],
+        "matcher": "WebFetch|WebSearch|Read|Bash|Glob|Grep|NotebookRead|mcp__.*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/g1_guard.py"
+            ],
+            "timeout": 20,
+            "statusMessage": "G-1: verifying the call"
+          }
+        ],
+        "matcher": "Bash|Write|Edit|NotebookEdit|WebFetch|SendUserFile|mcp__.*"
+      }
+    ]
+  }
+}

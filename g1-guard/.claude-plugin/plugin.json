@@ -1,0 +1,8 @@
+{
+  "name": "g1-guard",
+  "description": "Geodesia G-1 guard for Claude Code: prompt, retrieved content, tool calls",
+  "version": "0.1.0",
+  "author": {
+    "name": "Geodesia"
+  }
+}

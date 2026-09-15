@@ -1,0 +1,19 @@
+{
+  "name": "geodesia",
+  "interface": {
+    "displayName": "Geodesia"
+  },
+  "plugins": [
+    {
+      "name": "g1-guard",
+      "source": {
+        "source": "local",
+        "path": "./codex-g1-guard"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
