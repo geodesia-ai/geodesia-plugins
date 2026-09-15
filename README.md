@@ -34,6 +34,19 @@ claude plugin marketplace add geodesia-ai/geodesia-plugins && \
 claude plugin install g1-guard@geodesia --scope user --yes
 ```
 
+**If `/plugin` is not available in your build**
+
+Older Claude Code builds have no plugin command. Install straight from this repo instead. It merges
+into your `settings.json` rather than overwriting it, keeps a backup, and is safe to run twice:
+
+```bash
+git clone --depth 1 https://github.com/geodesia-ai/geodesia-plugins.git
+sh geodesia-plugins/install.sh            # --dry-run to see it first, --uninstall to remove
+```
+
+Then restart your agent. `sh geodesia-plugins/install.sh --uninstall` removes the hooks and leaves
+anything you or another vendor put in that file untouched.
+
 **OpenAI Codex**
 
 ```bash
